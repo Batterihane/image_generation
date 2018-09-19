@@ -1,0 +1,5 @@
+docker run -it test /bin/bash
+
+docker exec -it test /bin/bash
+
+docker cp <CONTAINER_ID>:/app/models .
