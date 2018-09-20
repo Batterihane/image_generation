@@ -177,8 +177,8 @@ class Dataset(object):
         :param dataset_name: Database name
         :param data_files: List of files in the database
         """
-        IMAGE_WIDTH = 128
-        IMAGE_HEIGHT = 128
+        IMAGE_WIDTH = 256
+        IMAGE_HEIGHT = 256
 
         self.image_mode = 'RGB'
         image_channels = 3

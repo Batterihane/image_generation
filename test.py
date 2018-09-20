@@ -25,7 +25,7 @@ if do_preprocess == True:
 
     for each in os.listdir(data_dir):
         image = cv2.imread(os.path.join(data_dir, each))
-        image = cv2.resize(image, (128, 128))
+        image = cv2.resize(image, (256, 256))
         cv2.imwrite(os.path.join(data_resized_dir, each), image)
 
 # This part was taken from Udacity Face generator project
@@ -171,10 +171,29 @@ def generator(z, output_channel_dim, is_train=True):
        
         trans_conv4_out = tf.nn.leaky_relu(batch_trans_conv4, alpha=alpha, name="trans_conv4_out")
 
+
+
+
+        # Transposed conv 5 --> BatchNorm --> LeakyReLU
+        # 128x128x64 --> 256x256x32
+        trans_conv5 = tf.layers.conv2d_transpose(inputs = trans_conv4_out,
+                                  filters = 32,
+                                  kernel_size = [5,5],
+                                  strides = [2,2],
+                                  padding = "SAME",
+                                kernel_initializer=tf.truncated_normal_initializer(stddev=0.02),
+                                name="trans_conv5")
+
+        batch_trans_conv5 = tf.layers.batch_normalization(inputs = trans_conv5, training=is_train, epsilon=1e-5, name="batch_trans_conv5")
+
+        trans_conv5_out = tf.nn.leaky_relu(batch_trans_conv5, alpha=alpha, name="trans_conv5_out")
+
+
+
         
-        # Transposed conv 5 --> tanh
-        # 128x128x64 --> 128x128x3
-        logits = tf.layers.conv2d_transpose(inputs = trans_conv4_out,
+        # Transposed conv 6 --> tanh
+        # 256x256x32 --> 256x256x3
+        logits = tf.layers.conv2d_transpose(inputs = trans_conv5_out,
                                   filters = 3,
                                   kernel_size = [5,5],
                                   strides = [1,1],
@@ -203,10 +222,10 @@ def discriminator(x, is_reuse=False, alpha = 0.2):
     '''
     with tf.variable_scope("discriminator", reuse = is_reuse): 
         
-        # Input layer 128*128*3 --> 64x64x64
+        # Input layer 256*256*3 --> 128x128x32
         # Conv --> BatchNorm --> LeakyReLU   
         conv1 = tf.layers.conv2d(inputs = x,
-                                filters = 64,
+                                filters = 32,
                                 kernel_size = [5,5],
                                 strides = [2,2],
                                 padding = "SAME",
@@ -219,31 +238,31 @@ def discriminator(x, is_reuse=False, alpha = 0.2):
                                                      name = 'batch_norm1')
 
         conv1_out = tf.nn.leaky_relu(batch_norm1, alpha=alpha, name="conv1_out")
-        
-        
-        # 64x64x64--> 32x32x128
-        # Conv --> BatchNorm --> LeakyReLU   
+
+
+
+        # Input layer 128*128*32 --> 64x64x64
+        # Conv --> BatchNorm --> LeakyReLU
         conv2 = tf.layers.conv2d(inputs = conv1_out,
-                                filters = 128,
-                                kernel_size = [5, 5],
-                                strides = [2, 2],
+                                filters = 64,
+                                kernel_size = [5,5],
+                                strides = [2,2],
                                 padding = "SAME",
                                 kernel_initializer=tf.truncated_normal_initializer(stddev=0.02),
                                 name='conv2')
-        
+
         batch_norm2 = tf.layers.batch_normalization(conv2,
                                                    training = True,
                                                    epsilon = 1e-5,
                                                      name = 'batch_norm2')
-        
-        conv2_out = tf.nn.leaky_relu(batch_norm2, alpha=alpha, name="conv2_out")
 
+        conv2_out = tf.nn.leaky_relu(batch_norm2, alpha=alpha, name="conv2_out")
         
         
-        # 32x32x128 --> 16x16x256
+        # 64x64x64--> 32x32x128
         # Conv --> BatchNorm --> LeakyReLU   
         conv3 = tf.layers.conv2d(inputs = conv2_out,
-                                filters = 256,
+                                filters = 128,
                                 kernel_size = [5, 5],
                                 strides = [2, 2],
                                 padding = "SAME",
@@ -253,18 +272,18 @@ def discriminator(x, is_reuse=False, alpha = 0.2):
         batch_norm3 = tf.layers.batch_normalization(conv3,
                                                    training = True,
                                                    epsilon = 1e-5,
-                                                name = 'batch_norm3')
+                                                     name = 'batch_norm3')
         
         conv3_out = tf.nn.leaky_relu(batch_norm3, alpha=alpha, name="conv3_out")
 
         
         
-        # 16x16x256 --> 16x16x512
+        # 32x32x128 --> 16x16x256
         # Conv --> BatchNorm --> LeakyReLU   
         conv4 = tf.layers.conv2d(inputs = conv3_out,
-                                filters = 512,
+                                filters = 256,
                                 kernel_size = [5, 5],
-                                strides = [1, 1],
+                                strides = [2, 2],
                                 padding = "SAME",
                                 kernel_initializer=tf.truncated_normal_initializer(stddev=0.02),
                                 name='conv4')
@@ -278,12 +297,12 @@ def discriminator(x, is_reuse=False, alpha = 0.2):
 
         
         
-        # 16x16x512 --> 8x8x1024
+        # 16x16x256 --> 16x16x512
         # Conv --> BatchNorm --> LeakyReLU   
         conv5 = tf.layers.conv2d(inputs = conv4_out,
-                                filters = 1024,
+                                filters = 512,
                                 kernel_size = [5, 5],
-                                strides = [2, 2],
+                                strides = [1, 1],
                                 padding = "SAME",
                                 kernel_initializer=tf.truncated_normal_initializer(stddev=0.02),
                                 name='conv5')
@@ -295,9 +314,28 @@ def discriminator(x, is_reuse=False, alpha = 0.2):
         
         conv5_out = tf.nn.leaky_relu(batch_norm5, alpha=alpha, name="conv5_out")
 
+        
+        
+        # 16x16x512 --> 8x8x1024
+        # Conv --> BatchNorm --> LeakyReLU   
+        conv6 = tf.layers.conv2d(inputs = conv5_out,
+                                filters = 1024,
+                                kernel_size = [5, 5],
+                                strides = [2, 2],
+                                padding = "SAME",
+                                kernel_initializer=tf.truncated_normal_initializer(stddev=0.02),
+                                name='conv6')
+        
+        batch_norm6 = tf.layers.batch_normalization(conv6,
+                                                   training = True,
+                                                   epsilon = 1e-5,
+                                                name = 'batch_norm6')
+        
+        conv6_out = tf.nn.leaky_relu(batch_norm6, alpha=alpha, name="conv6_out")
+
          
         # Flatten it
-        flatten = tf.reshape(conv5_out, (-1, 8*8*1024))
+        flatten = tf.reshape(conv6_out, (-1, 8*8*1024))
         
         # Logits
         logits = tf.layers.dense(inputs = flatten,
@@ -486,13 +524,13 @@ def train(epoch_count, batch_size, z_dim, learning_rate_D, learning_rate_G, beta
 
 
 # Size input image for discriminator
-real_size = (128,128,3)
+real_size = (256,256,3)
 
 # Size of latent vector to generator
 z_dim = 100
 learning_rate_D =  .00005 # Thanks to Alexia Jolicoeur Martineau https://ajolicoeur.wordpress.com/cats/
 learning_rate_G = 2e-4 # Thanks to Alexia Jolicoeur Martineau https://ajolicoeur.wordpress.com/cats/
-batch_size = 64
+batch_size = 16
 epochs = 215
 alpha = 0.2
 beta1 = 0.5
