@@ -15,6 +15,7 @@ import cv2
 
 do_preprocess = True
 from_checkpoint = False
+no_train = False
 
 data_dir = './aarhusstiftstidende' # Data
 data_resized_dir = "./resized_data"# Resized data
@@ -438,7 +439,7 @@ def train(epoch_count, batch_size, z_dim, learning_rate_D, learning_rate_G, beta
             image_path = "./out/out.jpg"
             show_generator_output(sess, 1, input_z, data_shape[3], data_image_mode, image_path, True, False)
             
-        else:
+        if not no_train:
             for epoch_i in range(epoch_count):        
                 num_epoch += 1
 
