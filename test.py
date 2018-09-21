@@ -6,7 +6,7 @@ import helper
 from glob import glob
 import pickle as pkl
 import scipy.misc
-
+import datetime
 import time
 
 import cv2
@@ -469,8 +469,7 @@ def train(epoch_count, batch_size, z_dim, learning_rate_D, learning_rate_G, beta
         
         # Saver
         saver = tf.train.Saver()
-        
-        num_epoch = 0
+
         
         if from_checkpoint == True:
             saver.restore(sess, "./models/model.ckpt")
@@ -478,15 +477,14 @@ def train(epoch_count, batch_size, z_dim, learning_rate_D, learning_rate_G, beta
             show_generator_output(sess, 1, input_z, data_shape[3], data_image_mode, image_path, True, False)
             
         if not no_train:
-            for epoch_i in range(epoch_count):        
-                num_epoch += 1
+            for epoch_i in range(epoch_count):
 
-                if num_epoch % 5 == 0:
+                if epoch_i % 5 == 0:
 
                     # Save model every 5 epochs
                     #if not os.path.exists("models/" + version):
                     #    os.makedirs("models/" + version)
-                    save_path = saver.save(sess, "./models/model.ckpt")
+                    save_path = saver.save(sess, "./models/model.ckpt", epoch_i)
                     print("Model saved")
 
                 for batch_images in get_batches(batch_size):
@@ -499,24 +497,21 @@ def train(epoch_count, batch_size, z_dim, learning_rate_D, learning_rate_G, beta
                     _ = sess.run(d_opt, feed_dict={input_images: batch_images, input_z: batch_z, lr_D: learning_rate_D})
                     _ = sess.run(g_opt, feed_dict={input_images: batch_images, input_z: batch_z, lr_G: learning_rate_G})
 
-                    if i % 10 == 0:
-                        train_loss_d = d_loss.eval({input_z: batch_z, input_images: batch_images})
-                        train_loss_g = g_loss.eval({input_z: batch_z})
-
-                        # Save it
-                        image_name = str(i) + ".jpg"
-                        image_path = "./images/" + image_name
-                        show_generator_output(sess, 4, input_z, data_shape[3], data_image_mode, image_path, True, False) 
-
                     # Print every 5 epochs (for stability overwize the jupyter notebook will bug)
-                    if i % 1500 == 0:
+                    if i % 100 == 0 or i == 10:
+                      train_loss_d = d_loss.eval({input_z: batch_z, input_images: batch_images})
+                      train_loss_g = g_loss.eval({input_z: batch_z})
 
-                        # image_name = str(i) + ".jpg"
-                        # image_path = "./images/" + image_name
-                        print("Epoch {}/{}...".format(epoch_i+1, epochs),
+                      # Save it
+                      image_name = str(i) + ".jpg"
+                      image_path = "./images/" + image_name
+                      show_generator_output(sess, 4, input_z, data_shape[3], data_image_mode, image_path, True, False)
+
+                      print("Time: {}...".format(datetime.datetime.now()),
+                              "Epoch {}/{}...".format(epoch_i, epochs),
+                              "i: {}...".format(i),
                               "Discriminator Loss: {:.4f}...".format(train_loss_d),
                               "Generator Loss: {:.4f}".format(train_loss_g))
-                        # show_generator_output(sess, 4, input_z, data_shape[3], data_image_mode, image_path, False, True)
                 
             
                     
